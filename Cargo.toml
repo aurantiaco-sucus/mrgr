@@ -1,0 +1,11 @@
+[package]
+name = "mrgr"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+winit = "0.29.3"
+skia-safe = { version = "0.68.0", default-features = false, features = ["binary-cache"] }
+env_logger = "0.10.1"
+log = "0.4.20"
+softbuffer = { git = "https://github.com/rust-windowing/softbuffer.git" }
