@@ -9,3 +9,4 @@ skia-safe = { version = "0.68.0", default-features = false, features = ["binary-
 env_logger = "0.10.1"
 log = "0.4.20"
 softbuffer = { git = "https://github.com/rust-windowing/softbuffer.git" }
+once_cell = "1.18.0"

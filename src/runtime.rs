@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use winit::event::{DeviceEvent, Event, StartCause, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopProxy};
 use winit::window::{Window, WindowBuilder, WindowButtons};
-use crate::{Config, config};
+use crate::{config, MrgrConfig};
 
 static mut GAME_THREAD: Option<ThreadId> = None;
 
@@ -24,7 +24,7 @@ pub enum RuntimeEvent {
     ShutdownRequested
 }
 
-fn winit_create_window(el: EventLoop<RuntimeEvent>, config: &Config) -> Window {
+fn winit_create_window(el: &EventLoop<RuntimeEvent>, config: &MrgrConfig) -> Window {
     WindowBuilder::new()
         .with_active(true)
         .with_inner_size(config.physical_size())
@@ -37,7 +37,7 @@ fn winit_create_window(el: EventLoop<RuntimeEvent>, config: &Config) -> Window {
 }
 
 fn softbuffer_create_context<'a>(
-    config: &Config,
+    config: &MrgrConfig,
     window: &'a Window
 ) -> softbuffer::Surface<&'a Window, &'a Window> {
     let context = softbuffer::Context::new(window).unwrap();
@@ -50,7 +50,7 @@ fn softbuffer_create_context<'a>(
 }
 
 pub fn skia_softbuffer_surface<'pixels>(
-    config: &Config,
+    config: &MrgrConfig,
     softbuffer_surface: &mut softbuffer::Surface<&Window, &Window>,
 ) -> skia_safe::Borrows<'pixels, skia_safe::Surface> {
     let size = config.physical_size();
@@ -67,20 +67,21 @@ pub fn skia_softbuffer_surface<'pixels>(
         &info, buf, size.width as usize * 4, None).unwrap()
 }
 
-pub fn skia_raster_surface<'pixels>(config: &Config) -> skia_safe::Surface {
+pub fn skia_raster_surface<'pixels>(config: &MrgrConfig) -> skia_safe::Surface {
     skia_safe::surfaces::raster_n32_premul(
         (config.viewport_size.0 as i32, config.viewport_size.1 as i32)).unwrap()
 }
 
-pub fn launch_softbuffer_skia_raster_runtime(config: Config) {
+pub fn launch_softbuffer_skia_raster_runtime(config: MrgrConfig) {
     let event_loop = EventLoopBuilder::<RuntimeEvent>::with_user_event()
         .build().unwrap();
     let proxy = event_loop.create_proxy();
-    let window = winit_create_window(event_loop, &config);
+    let window = winit_create_window(&event_loop, &config);
 
     let mut sb_surface = softbuffer_create_context(&config, &window);
     let mut present_surface = skia_softbuffer_surface(&config, &mut sb_surface);
     let mut viewport_surface = Arc::new(Mutex::new(skia_raster_surface(&config)));
+    viewport_surface.lock().unwrap().canvas().clear(skia_safe::Color::WHITE);
 
     let rt = Runtime {
         proxy,
@@ -155,10 +156,12 @@ pub fn launch_softbuffer_skia_raster_runtime(config: Config) {
         }
         if ins_last_frame.elapsed() >= dur_frame {
             ins_last_frame += dur_frame;
-            let image = viewport_surface.lock().unwrap().image_snapshot();
-            present_surface.canvas()
-                .draw_image_rect(&image, None, &present_bounds, &default_paint);
-            sb_surface.buffer_mut().unwrap().present().unwrap();
+            if let Ok(mut surface) = viewport_surface.try_lock() {
+                let image = surface.image_snapshot();
+                present_surface.canvas()
+                    .draw_image_rect(&image, None, &present_bounds, &default_paint);
+                sb_surface.buffer_mut().unwrap().present().unwrap();
+            }
         }
         window_target.set_control_flow(ControlFlow::WaitUntil(ins_last_frame + dur_frame))
     }).unwrap();

@@ -11,8 +11,8 @@ pub const MINIMUM_HEIGHT: u32 = 72;
 pub const MAXIMUM_ZOOM_LEVEL: u32 = 10;
 pub const MINIMUM_ZOOM_LEVEL: u32 = 1;
 
-pub const MAXIMUM_FRAMERATE: u8 = 240;
-pub const MINIMUM_FRAMERATE: u8 = 5;
+pub const MAXIMUM_FRAMERATE: u32 = 480;
+pub const MINIMUM_FRAMERATE: u32 = 15;
 
 pub const fn minimum_physical_size() -> PhysicalSize<u32> {
     PhysicalSize::new(MINIMUM_WIDTH * MINIMUM_ZOOM_LEVEL,
@@ -24,15 +24,15 @@ pub const fn maximum_physical_size() -> PhysicalSize<u32> {
                       MAXIMUM_HEIGHT * MAXIMUM_ZOOM_LEVEL)
 }
 
-pub struct LaunchConfig {
+pub struct MrgrConfig {
     pub viewport_size: (u32, u32),
     pub zoom_level: u32,
-    pub framerate: u8,
+    pub framerate: u32,
     pub caption: &'static str,
     pub game_main: fn(),
 }
 
-impl LaunchConfig {
+impl MrgrConfig {
     pub(crate) fn ensure_sanity(&self) -> bool {
         if (self.viewport_size.0 > MAXIMUM_WIDTH) || (self.viewport_size.1 > MAXIMUM_HEIGHT) {
             error!("Wrong configuration: viewport size is too big!");
